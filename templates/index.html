@@ -1,25 +1,140 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-    <title>Fetch LiveFFN</title>
+<meta charset="UTF-8" />
+<title>Podium 3 premiers par catégorie</title>
+<style>
+  body {
+    margin: 0; padding-bottom: 150px; /* espace pour l'overlay */
+    font-family: Arial, sans-serif;
+    background: #222;
+    color: #eee;
+  }
+  #podiumOverlay {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,0.85);
+    padding: 10px 20px;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.7);
+    display: flex;
+    flex-direction: column;
+    max-height: 140px;
+    overflow: hidden;
+  }
+  #categoryTitle {
+    font-size: 1.2em;
+    margin-bottom: 8px;
+    text-align: center;
+    font-weight: bold;
+  }
+  .swipeButtons {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 2em;
+    background: transparent;
+    border: none;
+    color: #eee;
+    cursor: pointer;
+    user-select: none;
+    padding: 0 10px;
+  }
+  #prevBtn {
+    left: 10px;
+  }
+  #nextBtn {
+    right: 10px;
+  }
+  #podiumContent {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+  }
+  .athlete {
+    flex: 1;
+    text-align: center;
+    border-radius: 8px;
+    background: #333;
+    margin: 0 5px;
+    padding: 10px;
+    box-shadow: 0 0 8px #444;
+  }
+  .place {
+    font-size: 1.5em;
+    font-weight: bold;
+  }
+  .name {
+    margin: 6px 0 4px;
+    font-size: 1.1em;
+  }
+  .club, .time {
+    font-size: 0.9em;
+    opacity: 0.8;
+  }
+</style>
 </head>
 <body>
-    <h1>Récupérer le contenu LiveFFN</h1>
-    <button onclick="fetchData()">Charger la page</button>
-    <div id="result" style="white-space: pre-wrap; border:1px solid #ccc; margin-top: 20px; max-height: 400px; overflow-y: scroll;"></div>
 
-    <script>
-        async function fetchData() {
-            document.getElementById('result').innerText = "Chargement...";
-            const response = await fetch('/api/fetch');
-            const data = await response.json();
-            if (data.error) {
-                document.getElementById('result').innerText = "Erreur : " + data.error;
-            } else {
-                // Affiche le HTML brut
-                document.getElementById('result').innerText = data.html;
-            }
-        }
-    </script>
+<div id="podiumOverlay">
+  <button id="prevBtn" class="swipeButtons">&#9664;</button>
+  <div id="categoryTitle">Chargement...</div>
+  <div id="podiumContent"></div>
+  <button id="nextBtn" class="swipeButtons">&#9654;</button>
+</div>
+
+<script>
+let top3Data = {};
+let categories = [];
+let currentIndex = 0;
+
+const categoryTitle = document.getElementById('categoryTitle');
+const podiumContent = document.getElementById('podiumContent');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+
+function renderCategory(index) {
+  const cat = categories[index];
+  categoryTitle.textContent = cat;
+  podiumContent.innerHTML = '';
+  top3Data[cat].forEach(athlete => {
+    const div = document.createElement('div');
+    div.className = 'athlete';
+    div.innerHTML = `
+      <div class="place">${athlete.place}</div>
+      <div class="name">${athlete.nom}</div>
+      <div class="club">${athlete.club}</div>
+      <div class="time">${athlete.temps}</div>
+    `;
+    podiumContent.appendChild(div);
+  });
+}
+
+prevBtn.onclick = () => {
+  currentIndex = (currentIndex - 1 + categories.length) % categories.length;
+  renderCategory(currentIndex);
+};
+nextBtn.onclick = () => {
+  currentIndex = (currentIndex + 1) % categories.length;
+  renderCategory(currentIndex);
+};
+
+// Charge les données JSON dynamiquement
+fetch('/static/top3_categories.json')
+  .then(response => response.json())
+  .then(data => {
+    top3Data = data;
+    categories = Object.keys(top3Data);
+    if(categories.length > 0){
+      renderCategory(currentIndex);
+    } else {
+      categoryTitle.textContent = "Aucun résultat trouvé";
+    }
+  })
+  .catch(() => {
+    categoryTitle.textContent = "Erreur de chargement des résultats";
+  });
+
+</script>
+
 </body>
 </html>
