@@ -1,19 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Mon site Flask</title>
+    <title>Fetch LiveFFN</title>
 </head>
 <body>
-  <h1>Bienvenue sur mon site !</h1>
-  <button onclick="getData()">Appeler l'API</button>
-  <p id="result"></p>
+    <h1>Récupérer le contenu LiveFFN</h1>
+    <button onclick="fetchData()">Charger la page</button>
+    <div id="result" style="white-space: pre-wrap; border:1px solid #ccc; margin-top: 20px; max-height: 400px; overflow-y: scroll;"></div>
 
-  <script>
-    async function getData() {
-      const response = await fetch('/api/data');
-      const data = await response.json();
-      document.getElementById('result').innerText = data.message;
-    }
-  </script>
+    <script>
+        async function fetchData() {
+            document.getElementById('result').innerText = "Chargement...";
+            const response = await fetch('/api/fetch');
+            const data = await response.json();
+            if (data.error) {
+                document.getElementById('result').innerText = "Erreur : " + data.error;
+            } else {
+                // Affiche le HTML brut
+                document.getElementById('result').innerText = data.html;
+            }
+        }
+    </script>
 </body>
 </html>
