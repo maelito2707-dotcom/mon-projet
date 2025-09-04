@@ -40,12 +40,13 @@ def scrape_and_save():
                         "points": cols[8].get_text(strip=True),
                     })
 
+    os.makedirs('static', exist_ok=True)
     with open(JSON_PATH, "w", encoding="utf-8") as f:
         json.dump(top_results, f, ensure_ascii=False, indent=2)
 
 @app.route('/')
 def index():
-    # Scrape fresh data à chaque chargement (optionnel, peut être décommenté si tu veux rafraîchir à chaque fois)
+    # Optionnel : actualiser les données à chaque chargement
     # scrape_and_save()
     return render_template('index.html')
 
@@ -54,6 +55,5 @@ def static_files(filename):
     return send_from_directory('static', filename)
 
 if __name__ == '__main__':
-    # Scrape et sauvegarde avant lancement (au moins une fois)
     scrape_and_save()
     app.run(host='0.0.0.0', port=5000)
