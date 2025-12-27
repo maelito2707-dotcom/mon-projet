@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>📸 Liste des Nageurs</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      padding: 30px;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      color: #0056b3;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 30px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #0056b3;
+      color: white;
+    }
+
+    tr:hover {
+      background-color: #f1f9ff;
+    }
+
+    input.photo-input {
+      width: 100%;
+      padding: 6px;
+      font-size: 14px;
+    }
+
+    #saveButton {
+      margin-top: 20px;
+      display: block;
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #0056b3;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #saveButton:hover {
+      background: #003e82;
+    }
+
+    .back {
+      display: block;
+      margin: 20px auto;
+      text-align: center;
+      font-weight: bold;
+      text-decoration: none;
+      color: #0056b3;
+      font-size: 16px;
+    }
+
+    .back:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📸 Nageurs enregistrés</h1>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Prénom</th>
+        <th>Club</th>
+        <th>Photo</th>
+      </tr>
+    </thead>
+    <tbody id="nageursBody">
+      {% for nageur in nageurs %}
+      <tr>
+        <td>{{ nageur.nom }}</td>
+        <td>{{ nageur.prenom }}</td>
+        <td>{{ nageur.club }}</td>
+        <td>
+          <input type="text" value="{{ nageur.photo_url }}" data-index="{{ loop.index0 }}" class="photo-input" />
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <button id="saveButton">💾 Enregistrer</button>
+  <a href="/" class="back">← Retour à l'accueil</a>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const inputs = document.querySelectorAll(".photo-input");
+
+      inputs.forEach((input, index) => {
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            const next = inputs[index + 1];
+            if (next) next.focus();
+          } else if (e.key === "ArrowDown") {
+            e.preventDefault();
+            const next = inputs[index + 1];
+            if (next) next.focus();
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            const prev = inputs[index - 1];
+            if (prev) prev.focus();
+          }
+        });
+      });
+
+      document.getElementById("saveButton").addEventListener("click", () => {
+        const rows = document.querySelectorAll("#nageursBody tr");
+        const updated = [];
+
+        rows.forEach((row) => {
+          const cells = row.querySelectorAll("td");
+          updated.push({
+            nom: cells[0].textContent.trim(),
+            prenom: cells[1].textContent.trim(),
+            club: cells[2].textContent.trim(),
+            photo: cells[3].querySelector("input").value.trim(),
+          });
+        });
+
+        fetch("/update_nageurs", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updated),
+        })
+        .then((res) => {
+          if (res.ok) {
+            alert("✅ Données enregistrées !");
+          } else {
+            alert("❌ Erreur lors de l'enregistrement.");
+          }
+        })
+        .catch(() => alert("❌ Échec de la requête."));
+      });
+    });
+  </script>
+
+</body>
+</html>
