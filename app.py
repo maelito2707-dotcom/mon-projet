@@ -296,6 +296,7 @@ def download_html():
 
     # 2️⃣ Template HTML avec le JSON injecté
     html_content = """
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -371,6 +372,22 @@ iframe {
     src="confettis2.html"
     style="position:absolute; top:0; left:0; width:100%; height:100%; border:none; z-index:3; pointer-events:none;">
 </iframe>
+<iframe
+  id="pancarteFrame"
+  src="tetspencarte.html"
+  style="
+    position:absolute;
+    top:0; left:0;
+    width:100%;
+    height:100%;
+    border:none;
+    z-index:4;       /* au-dessus des pages (2 et 1) */
+    display:none;
+    pointer-events:none;
+    background:transparent;
+  ">
+</iframe>
+
 
 
   <!-- Pages -->
@@ -418,6 +435,25 @@ const stinger = document.getElementById('stinger');
 const iframeConfetti = document.getElementById("confettiFrame");
 
 const cutTimeMs = 1100; // moment du cut en ms
+const pancarteFrame = document.getElementById("pancarteFrame");
+
+let pancarteDejaMontree = false;
+const DUREE_PANCARTE = 7500; // durée totale de l'animation
+function jouerPancarteEpreuve() {
+    if (!pancarteFrame) return;
+
+    pancarteFrame.style.display = "block";
+
+    // ✅ envoyer le nom APRÈS affichage
+    envoyerNomEpreuve();
+
+    setTimeout(() => {
+        pancarteFrame.style.display = "none";
+    }, DUREE_PANCARTE);
+}
+
+
+
 
 // --- Frame responsive ---
 function resizeFrame() {
@@ -478,37 +514,6 @@ const nouvellesImg2 = [
   ""
 ];
 
-
-// --- Gestion centralisée du clavier ---
-function handleKeyDown(e) {
-  switch(e.key.toLowerCase()) {
-    case " ": // espace : stinger + actions page2
-      e.preventDefault();
-      playStingerAndCut();
-      sendMessageToIframe(page2, { action: "setAngle", angle: 90 });
-      setTimeout(() => {
-        sendMessageToIframe(page2, { action: "arreterProgressif", duree: 4000 });
-      }, cutTimeMs + 1000);
-      break;
-
-    case "s":
-      sendMessageToIframe(page2, { action: "arreterProgressif", duree: 2000 });
-      break;
-    case "t":
-      sendMessageToIframe(page2, { action: "tournerProgressif", angle: 60, duree: 3000 });
-      break;
-    case "a":
-      updateNacellesImg2Iframe(page1, nouvellesImg2);
-      break;
-  }
-}
-
-// --- Écoute clavier sur document et window ---
-document.addEventListener("keydown", handleKeyDown);
-window.addEventListener("keydown", handleKeyDown);
-
-console.log("Gestion clavier parent et confetti prête !");
-
 function spawnConfettiAtCarteOverlay(count = 150, offsetX = 0, offsetY = 0) {
     const overlay = document.getElementById("carteOverlay");
     if (!overlay) return;
@@ -534,34 +539,6 @@ function spawnConfettiAtCarteOverlay(count = 150, offsetX = 0, offsetY = 0) {
     });
 }
 
-</script>
-<script>
-window.addEventListener("keydown", (e) => {
-    const overlay = document.getElementById("carteOverlay");
-    const confettiFrame = document.getElementById("confettiFrame");
-
-    if (e.code === "KeyO") { // touche O pour lancer overlay + confettis
-        overlay.style.display = "block";
-        overlay.style.animation = "none";   // reset animation
-        overlay.offsetHeight;               // reflow
-        overlay.style.animation = "zoomRotate 1s forwards";
-
-        const rect = overlay.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-
-        spawnConfettiAtCarteOverlay(count = 150);
-    }
-
-    if (e.code === "KeyP") { // touche P pour cacher l'overlay avec animation
-        overlay.style.animation = "bounceDown 0.8s forwards";
-        // Après la fin de l'animation, on cache complètement l'overlay
-        overlay.addEventListener("animationend", function handler() {
-            overlay.style.display = "none";
-            overlay.removeEventListener("animationend", handler);
-        });
-    }
-});
 </script>
 <script>
 // --- Fonction pour mettre à jour le contenu de l'étiquette ---
@@ -598,17 +575,6 @@ window.addEventListener("message", (event) => {
     }
 });
 
-// --- Exemple : mise à jour depuis le clavier ---
-window.addEventListener("keydown", (e) => {
-    if (e.code === "KeyU") { // touche U pour tester la mise à jour
-        updateCarteOverlay({
-            prenom: "Léo",
-            nom: "DUPONT",
-            club: "Paris Natation",
-            temps: "1'45\"32"
-        });
-    }
-});
 </script>
 <script>
 // --- Ton gros data ---
@@ -629,55 +595,104 @@ function afficherNageurCourant() {
     overlay.querySelector("#temps").textContent = nageur.temps;
 }
 
-function envoyerPhotosNacelles() {
-    const finale = finales.finales[finaleIndex];
-    if (!finale) return;
+function getPhotoPath(photoName, callback) {
+    const extensions = ['png', 'jpg', 'jpeg'];
+    let found = false;
 
-    const img2Array = finale.nageurs.map(n => n.photo);
-    // Complète si moins de 6 nacelles
-    while (img2Array.length < 6) img2Array.push("");
-
-    // Envoi à page1 et page2
-    updateNacellesImg2Iframe(page1, img2Array);
-    updateNacellesImg2Iframe(page2, img2Array);
+    extensions.forEach(ext => {
+        if (found) return; // déjà trouvé
+        const img = new Image();
+        img.src = `PHOTOS/${photoName}.${ext}`;
+        img.onload = () => {
+            found = true;
+            callback(img.src);
+        };
+        img.onerror = () => {
+            // si aucune image trouvée, callback après le dernier essai
+            if (!found && ext === extensions[extensions.length - 1]) {
+                callback("PHOTOS/default.png"); // image par défaut
+            }
+        };
+    });
 }
 
+function getPhotoPathPromise(photoName) {
+    return new Promise(resolve => {
+        const extensions = ['png', 'jpg', 'jpeg'];
+        let index = 0;
 
-// Gestion clavier pour navigation
-window.addEventListener("keydown", (e) => {
+        function tryNext() {
+            if (index >= extensions.length) {
+                resolve("PHOTOS/default.png");
+                return;
+            }
+
+            const img = new Image();
+            img.src = `PHOTOS/${photoName}.${extensions[index]}`;
+
+            img.onload = () => resolve(img.src);
+            img.onerror = () => {
+                index++;
+                tryNext();
+            };
+        }
+
+        tryNext();
+    });
+}
+
+async function envoyerPhotosNacelles() {
     const finale = finales.finales[finaleIndex];
     if (!finale) return;
 
-    switch(e.code) {
-        case "ArrowUp": // finale précédente
-            finaleIndex = (finaleIndex - 1 + finales.finales.length) % finales.finales.length;
-            nageurIndex = 0; // reset nageur
-            afficherNageurCourant();
-            envoyerPhotosNacelles();
-            break;
-        case "ArrowDown": // finale suivante
-            finaleIndex = (finaleIndex + 1) % finales.finales.length;
-            nageurIndex = 0;
-            afficherNageurCourant();
-            envoyerPhotosNacelles();
-            break;
-        case "ArrowLeft": // nageur précédent
-            nageurIndex = (nageurIndex - 1 + finale.nageurs.length) % finale.nageurs.length;
-            afficherNageurCourant();
-            break;
-        case "ArrowRight": // nageur suivant
-            nageurIndex = (nageurIndex + 1) % finale.nageurs.length;
-            afficherNageurCourant();
-            break;
-    }
-});
+    const img2Array = Array.from({ length: 6 }, () => ({
+    src: "PHOTOS/default.png",
+    plot: null
+}));
 
-// --- Touche U pour passer au nageur suivant ---
-window.addEventListener("keydown", (e) => {
-    if (e.code === "KeyU") {
-        updateCarteInfos();
-    }
-});
+    const promises = finale.nageurs.map(async (n) => {
+        const plotIndex = parseInt(n.plot, 10) - 1;
+        if (plotIndex < 0 || plotIndex >= 6) return;
+
+        const src = await getPhotoPathPromise(n.photo);
+        img2Array[plotIndex] = src;
+    });
+
+    await Promise.all(promises);
+
+    // 🔥 ENVOI GARANTI COMPLET
+safeUpdateNacelles(img2Array);
+
+
+    console.log("✅ Photos nacelles envoyées :", img2Array);
+}
+
+function safeUpdateNacelles(imgArray) {
+    let tries = 0;
+
+    const interval = setInterval(() => {
+        tries++;
+
+        updateNacellesImg2Iframe(page1, imgArray);
+        updateNacellesImg2Iframe(page2, imgArray);
+
+        if (tries >= 5) {
+            clearInterval(interval);
+            console.log("🟢 safeUpdateNacelles terminé");
+        }
+    }, 300);
+}
+
+function envoyerNomEpreuve() {
+    const finale = finales.finales[finaleIndex];
+    if (!finale || !pancarteFrame) return;
+
+    pancarteFrame.contentWindow.postMessage({
+        action: "setEpreuve",
+        epreuve: finale.epreuve
+    }, "*");
+}
+
 
 // --- fonction utilitaire delay ---
 function delay(ms) {
@@ -742,23 +757,6 @@ async function lancerFinale() {
     }
 }
 
-
-// --- Initialisation finale 1, nageur 0 ---
-window.addEventListener("DOMContentLoaded", () => {
-    finaleIndex = 0;
-    nageurIndex = 0;
-    afficherNageurCourant();
-    envoyerPhotosNacelles();
-});
-
-
-// --- gestion touche & ---
-window.addEventListener("keydown", (e) => {
-    if (e.key === "&") {
-        lancerFinale();
-    }
-});
-
 let page1Loaded = false;
 let page2Loaded = false;
 
@@ -772,15 +770,200 @@ page2.addEventListener("load", () => {
     if (page1Loaded) envoyerPhotosNacelles();
 });
 
-// Carte du premier nageur dès que DOM prêt
-window.addEventListener("DOMContentLoaded", () => {
-    finaleIndex = 0;
-    nageurIndex = 0;
-    afficherNageurCourant();
-});
-
 
 </script>
+<script>
+/* =========================
+   ÉTATS DE LA FINALE
+========================= */
+const ETAT = {
+    INIT: 0,
+    CARD_VISIBLE: 1
+};
+
+let etatFinale = ETAT.INIT;
+let finaleEnCours = false;
+let interrompreBoucle = false; // pour interruption propre
+
+/* =========================
+   FONCTIONS CARTE
+========================= */
+function montrerCarte() {
+    const overlay = document.getElementById("carteOverlay");
+    if (!overlay) return;
+
+    afficherNageurCourant();
+
+    overlay.style.display = "block";
+    overlay.style.animation = "none";
+    overlay.offsetHeight; // reset animation
+    overlay.style.animation = "zoomRotate 1s forwards";
+
+    spawnConfettiAtCarteOverlay();
+}
+
+function cacherCarte() {
+    const overlay = document.getElementById("carteOverlay");
+    if (!overlay) return;
+
+    overlay.style.animation = "bounceDown 0.8s forwards";
+    overlay.addEventListener("animationend", function handler() {
+        overlay.style.display = "none";
+        overlay.removeEventListener("animationend", handler);
+    });
+}
+
+/* =========================
+   STEP FINALE
+========================= */
+function stepFinale() {
+    const finale = finales.finales[finaleIndex];
+    if (!finale) return;
+
+    // 🔴 INTERRUPTION PROPRE
+    if (interrompreBoucle) {
+        const overlay = document.getElementById("carteOverlay");
+        if (overlay) overlay.style.display = "none";
+
+        finaleEnCours = false;
+        etatFinale = ETAT.INIT;
+        interrompreBoucle = false;
+        return;
+    }
+
+    /* 🎬 DÉMARRAGE */
+    if (!finaleEnCours) {
+        finaleEnCours = true;
+        nageurIndex = 0;
+
+        playStingerAndCut();
+        sendMessageToIframe(page2, { action: "setAngle", angle: 90 });
+
+        setTimeout(() => {
+            sendMessageToIframe(page2, {
+                action: "arreterProgressif",
+                duree: 4000
+            });
+        }, cutTimeMs + 1000);
+
+        // apparition auto de la première carte
+        setTimeout(() => {
+            montrerCarte();
+            etatFinale = ETAT.CARD_VISIBLE;
+        }, cutTimeMs + 2500);
+
+        return;
+    }
+
+    /* ⬇️ CACHER CARTE (PAUSE MANUELLE) */
+    if (etatFinale === ETAT.CARD_VISIBLE) {
+        cacherCarte();
+        nageurIndex++;
+
+        // 🏁 FIN DE FINALE
+        if (nageurIndex >= finale.nageurs.length) {
+            finaleEnCours = false;
+            etatFinale = ETAT.INIT;
+            console.log("🏁 Finale terminée");
+            return;
+        }
+
+        // rotation + apparition automatique de la prochaine carte
+        sendMessageToIframe(page2, {
+            action: "tournerProgressif",
+            angle: 60,
+            duree: 3000
+        });
+
+        setTimeout(() => {
+            montrerCarte();
+            etatFinale = ETAT.CARD_VISIBLE;
+        }, 2000);
+    }
+}
+
+/* =========================
+   TOUCHE &
+========================= */
+window.addEventListener("keydown", (e) => {
+    if (e.key !== "&") return;
+
+    // 🎬 1ère pression : pancarte épreuve uniquement
+    if (!pancarteDejaMontree) {
+        pancarteDejaMontree = true;
+
+        jouerPancarteEpreuve();
+
+        // on NE lance PAS le stinger ici
+        return;
+    }
+
+    // 🔁 Pressions suivantes : logique normale
+    stepFinale();
+});
+
+</script>
+
+<script>
+function getUrlParam(name, defaultValue = null) {
+    const params = new URLSearchParams(window.location.search);
+    return params.has(name) ? params.get(name) : defaultValue;
+}
+</script>
+<script>
+window.addEventListener("DOMContentLoaded", () => {
+
+    /* 🔢 lecture paramètre URL ?finale= */
+    const params = new URLSearchParams(window.location.search);
+    const finaleFromUrl = parseInt(params.get("finale"), 10);
+
+    if (!isNaN(finaleFromUrl) && finales.finales[finaleFromUrl]) {
+        finaleIndex = finaleFromUrl;
+    } else {
+        finaleIndex = 0;
+    }
+
+    nageurIndex = 0;
+
+    afficherNageurCourant();
+
+    /* 📸 envoyer photos quand iframes prêtes */
+    if (page1Loaded && page2Loaded) {
+        envoyerPhotosNacelles();
+    }
+
+    console.log("🎯 Finale initialisée :", finaleIndex);
+});
+</script>
+<script>
+window.addEventListener("keydown", (e) => {
+
+    // Bloquer la touche ← → pendant la finale active si tu veux
+    //if (finaleEnCours && (e.code === "ArrowLeft" || e.code === "ArrowRight")) return;
+
+    let nouvelleFinale = finaleIndex;
+
+    switch (e.code) {
+        case "ArrowLeft":
+            nouvelleFinale = (finaleIndex - 1 + finales.finales.length) % finales.finales.length;
+            break;
+
+        case "ArrowRight":
+            nouvelleFinale = (finaleIndex + 1) % finales.finales.length;
+            break;
+
+        default:
+            return; // on s'arrête si ce n'est pas ← ou →
+    }
+
+    // Recharger la page avec le nouveau paramètre finale
+    const url = new URL(window.location.href);
+    url.searchParams.set("finale", nouvelleFinale);
+    window.location.href = url.toString();
+});
+</script>
+
+
 </body>
 </html>
 """
