@@ -1,138 +1,212 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8" />
-<title>Podium 3 premiers par catégorie</title>
-<style>
-  body {
-    margin: 0; padding-bottom: 150px; /* espace pour l'overlay */
-    font-family: Arial, sans-serif;
-    background: #222;
-    color: #eee;
-  }
-  #podiumOverlay {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    background: rgba(0,0,0,0.85);
-    padding: 10px 20px;
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.7);
-    display: flex;
-    flex-direction: column;
-    max-height: 140px;
-    overflow: hidden;
-  }
-  #categoryTitle {
-    font-size: 1.2em;
-    margin-bottom: 8px;
-    text-align: center;
-    font-weight: bold;
-  }
-  .swipeButtons {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 2em;
-    background: transparent;
-    border: none;
-    color: #eee;
-    cursor: pointer;
-    user-select: none;
-    padding: 0 10px;
-  }
-  #prevBtn {
-    left: 10px;
-  }
-  #nextBtn {
-    right: 10px;
-  }
-  #podiumContent {
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-  }
-  .athlete {
-    flex: 1;
-    text-align: center;
-    border-radius: 8px;
-    background: #333;
-    margin: 0 5px;
-    padding: 10px;
-    box-shadow: 0 0 8px #444;
-  }
-  .place {
-    font-size: 1.5em;
-    font-weight: bold;
-  }
-  .name {
-    margin: 6px 0 4px;
-    font-size: 1.1em;
-  }
-  .club, .time {
-    font-size: 0.9em;
-    opacity: 0.8;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PPTX LANDRON</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+    header { text-align: center; margin-bottom: 25px; }
+    header h1 { font-weight: 700; color: #0056b3; }
+    .action-bar { max-width: 900px; margin: 0 auto 30px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .action-bar form, .action-bar button { flex: 1 1 180px; max-width: 220px; }
+    .action-bar button { width: 100%; background: #0056b3; border: none; color: white; padding: 12px; font-weight: 600; border-radius: 8px; cursor: pointer; }
+    .action-bar button:hover { background: #003f80; }
+    .container { max-width: 900px; margin: 0 auto; display: flex; gap: 30px; }
+    .panel-form, .panel-list { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .panel-form { width: 350px; flex-shrink: 0; }
+    .panel-form label { font-weight: 600; display: block; margin-bottom: 6px; }
+    .panel-form select { width: 100%; padding: 8px; margin-bottom: 18px; border-radius: 6px; border: 1px solid #ccc; }
+    .radio-group { display: flex; gap: 20px; margin-bottom: 20px; }
+    .panel-form button { width: 100%; padding: 12px; background: #0056b3; color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+    .panel-form button:hover { background: #003f80; }
+    .panel-list { flex-grow: 1; display: flex; flex-direction: column; }
+    .panel-list h2 { color: #0056b3; margin-top: 0; }
+    .list-container { flex-grow: 1; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; }
+    ul#item-list { list-style: none; padding: 0; margin: 0; }
+    ul#item-list li { padding: 10px 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    ul#item-list li:hover { background: #f0f6ff; }
+    .item-actions button { border: none; background: none; color: #0056b3; cursor: pointer; }
+    #loader { display: none; text-align: center; margin-bottom: 20px; font-weight: 600; color: #0056b3; }
+    @media (max-width: 800px) { .container { flex-direction: column; } .panel-form { width: 100%; } }
+  </style>
 </head>
+
 <body>
 
-<div id="podiumOverlay">
-  <button id="prevBtn" class="swipeButtons">&#9664;</button>
-  <div id="categoryTitle">Chargement...</div>
-  <div id="podiumContent"></div>
-  <button id="nextBtn" class="swipeButtons">&#9654;</button>
+<header>
+  <h1>PPTX LANDRON</h1>
+</header>
+
+<div class="action-bar">
+  <form action="/parametres" method="get">
+    <button>⚙️ Paramètres</button>
+  </form>
+
+  <a href="/nageurs" target="_blank" class="action-form" style="text-decoration:none;">
+    <div style="
+      background:#0056b3;
+      color:white;
+      padding:12px 16px;
+      border-radius:8px;
+      text-align:center;
+      font-weight:600;
+      cursor:pointer;">
+      🏊 Liste des nageurs
+    </div>
+  </a>
+
+  <button id="btn-associer-photos">📷 Associer photos</button>
+  <button id="btn-pptx">Générer la présentation</button>
+</div>
+
+<div id="loader">⏳ Traitement en cours...</div>
+
+<div class="container">
+
+  <!-- FORMULAIRE -->
+  <section class="panel-form">
+    <label>Compétition</label>
+    <select id="competition-select">
+      {% for comp in competitions %}
+        <option value="{{ comp.id_compet }}" {% if comp.id_compet == current_comp %}selected{% endif %}>
+          {{ comp.nom }} ({{ comp.id_compet }})
+        </option>
+      {% endfor %}
+    </select>
+
+    <label>Course</label>
+    <select id="course-select">
+      <option value="">-- Choisir --</option>
+      <option>50 NAGE LIBRE</option>
+      <option>100 NAGE LIBRE</option>
+      <option>200 NAGE LIBRE</option>
+      <option>400 NAGE LIBRE</option>
+      <option>800 NAGE LIBRE</option>
+      <option>1500 NAGE LIBRE</option>
+      <option>50 DOS</option>
+      <option>100 DOS</option>
+      <option>200 DOS</option>
+      <option>50 BRASSE</option>
+      <option>100 BRASSE</option>
+      <option>200 BRASSE</option>
+      <option>50 PAP</option>
+      <option>100 PAP</option>
+      <option>200 PAP</option>
+      <option>100 4N</option>
+      <option>200 4N</option>
+      <option>400 4N</option>
+    </select>
+
+    <label>Catégorie</label>
+    <select id="category-select">
+      <option value="">-- Choisir --</option>
+      <option>Benjamins et moins</option>
+      <option>Juniors 1 et 2</option>
+      <option>Juniors 3 et plus</option>
+    </select>
+
+    <div class="radio-group">
+      <label><input type="radio" name="gender" value="Dames"> Dames</label>
+      <label><input type="radio" name="gender" value="Messieurs"> Messieurs</label>
+    </div>
+
+    <button id="add-button" type="button">Ajouter</button>
+  </section>
+
+  <!-- LISTE -->
+  <section class="panel-list">
+    <h2>Courses sélectionnées</h2>
+    <div class="list-container">
+      <ul id="item-list"></ul>
+    </div>
+  </section>
+
 </div>
 
 <script>
-let top3Data = {};
-let categories = [];
-let currentIndex = 0;
+const itemList = document.getElementById("item-list");
+const loader = document.getElementById("loader");
 
-const categoryTitle = document.getElementById('categoryTitle');
-const podiumContent = document.getElementById('podiumContent');
-const prevBtn = document.getElementById('prevBtn');
-const nextBtn = document.getElementById('nextBtn');
+// Ajouter une course
+document.getElementById("add-button").onclick = () => {
+  const course = document.getElementById("course-select").value;
+  const cat = document.getElementById("category-select").value;
+  const gender = [...document.getElementsByName("gender")].find(r => r.checked)?.value;
 
-function renderCategory(index) {
-  const cat = categories[index];
-  categoryTitle.textContent = cat;
-  podiumContent.innerHTML = '';
-  top3Data[cat].forEach(athlete => {
-    const div = document.createElement('div');
-    div.className = 'athlete';
-    div.innerHTML = `
-      <div class="place">${athlete.place}</div>
-      <div class="name">${athlete.nom}</div>
-      <div class="club">${athlete.club}</div>
-      <div class="time">${athlete.temps}</div>
-    `;
-    podiumContent.appendChild(div);
-  });
+  if (!course || !cat || !gender) {
+    alert("Tous les champs sont obligatoires");
+    return;
+  }
+
+  const label = `${course} - ${gender[0]} (${cat})`;
+  if ([...itemList.children].some(li => li.textContent.includes(label))) return;
+
+  const li = document.createElement("li");
+  li.textContent = label;
+
+  const btn = document.createElement("button");
+  btn.textContent = "Supprimer";
+  btn.onclick = () => itemList.removeChild(li);
+
+  const actions = document.createElement("span");
+  actions.className = "item-actions";
+  actions.appendChild(btn);
+
+  li.appendChild(actions);
+  itemList.appendChild(li);
+};
+
+// Fonction de POST générique
+function send(endpoint) {
+  const courses = [...itemList.children].map(li => li.firstChild.textContent.trim());
+  const idCompet = document.getElementById("competition-select").value;
+
+  if (!courses.length) return alert("Aucune course");
+
+  loader.style.display = "block";
+
+  fetch(endpoint, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ courses, id_competition: idCompet })
+  })
+  .then(r => r.json())
+  .then(d => alert(d.message || "OK"))
+  .finally(() => loader.style.display = "none");
 }
 
-prevBtn.onclick = () => {
-  currentIndex = (currentIndex - 1 + categories.length) % categories.length;
-  renderCategory(currentIndex);
-};
-nextBtn.onclick = () => {
-  currentIndex = (currentIndex + 1) % categories.length;
-  renderCategory(currentIndex);
-};
+// Associer photos
+document.getElementById("btn-associer-photos").onclick = () => send("/associer-photos");
 
-// Charge les données JSON dynamiquement
-fetch('/static/top3_categories.json')
-  .then(response => response.json())
-  .then(data => {
-    top3Data = data;
-    categories = Object.keys(top3Data);
-    if(categories.length > 0){
-      renderCategory(currentIndex);
-    } else {
-      categoryTitle.textContent = "Aucun résultat trouvé";
-    }
-  })
-  .catch(() => {
-    categoryTitle.textContent = "Erreur de chargement des résultats";
-  });
+document.getElementById("btn-pptx").onclick = () => {
+    const courses = [...itemList.children].map(li => li.firstChild.textContent.trim());
+    const idCompet = document.getElementById("competition-select").value;
+    if (!courses.length) return alert("Aucune course");
+
+    loader.style.display = "block";
+
+    fetch("/download-html", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ courses, id_competition: idCompet })
+    })
+    .then(r => r.blob())
+    .then(blob => {
+        const a = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        a.href = url;
+        const now = new Date();
+        const datetime = now.toISOString().replace(/[:.]/g, "-");
+        a.download = `presentation_${idCompet}_${datetime}.html`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    })
+    .finally(() => loader.style.display = "none");
+};
 
 </script>
 
