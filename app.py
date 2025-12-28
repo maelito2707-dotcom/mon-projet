@@ -295,6 +295,11 @@ def download_html():
 
     json_final = live.generer_finales_db(finales, id_compet)
     json_final = live.synchroniser_json_avec_photos(json_final)
+
+    # 🔥 MANQUAIT ICI
+    for finale in json_final:
+        live.completer_finale_6_plots(finale)
+
     json_str = json.dumps(json_final, ensure_ascii=False, indent=2)
 
     # 2️⃣ Template HTML avec le JSON injecté
