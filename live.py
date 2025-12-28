@@ -220,3 +220,30 @@ def synchroniser_json_avec_photos(finales_data):
         conn.close()
 
     return finales_data
+
+def completer_finale_6_plots(finale):
+    """
+    finale = {
+        "epreuve": "...",
+        "nageurs": [ {...}, {...} ]
+    }
+    """
+    nageurs_par_plot = {int(n["plot"]): n for n in finale["nageurs"]}
+
+    nageurs_complets = []
+
+    for plot in range(1, 7):
+        if plot in nageurs_par_plot:
+            nageurs_complets.append(nageurs_par_plot[plot])
+        else:
+            nageurs_complets.append({
+                "plot": plot,
+                "nom": "",
+                "prenom": "",
+                "club": "",
+                "temps": "",
+                "photo": "default"
+            })
+
+    finale["nageurs"] = nageurs_complets
+    return finale
