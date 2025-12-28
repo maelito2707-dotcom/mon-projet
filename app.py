@@ -254,6 +254,9 @@ def generer_presentation():
     # 🔥 Compléter avec les photos depuis la DB
     json_final = live.synchroniser_json_avec_photos(json_final)
 
+    for finale in json_final:
+        live.completer_finale_6_plots(finale)
+
     # 🖨️ Debug : print JSON final
     print("\n========== JSON PRÉSENTATION ==========")
     for epreuve in json_final:
@@ -434,7 +437,7 @@ const page2 = document.getElementById('page2');
 const stinger = document.getElementById('stinger');
 const iframeConfetti = document.getElementById("confettiFrame");
 
-const cutTimeMs = 1100; // moment du cut en ms
+const cutTimeMs = 950; // moment du cut en ms
 const pancarteFrame = document.getElementById("pancarteFrame");
 
 let pancarteDejaMontree = false;
@@ -886,7 +889,7 @@ function stepFinale() {
    TOUCHE &
 ========================= */
 window.addEventListener("keydown", (e) => {
-    if (e.key !== "&") return;
+    if (e.key !== "a") return;
 
     // 🎬 1ère pression : pancarte épreuve uniquement
     if (!pancarteDejaMontree) {
